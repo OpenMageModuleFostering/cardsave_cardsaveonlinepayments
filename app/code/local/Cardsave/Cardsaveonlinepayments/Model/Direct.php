@@ -28,6 +28,7 @@ class Cardsave_Cardsaveonlinepayments_Model_Direct extends Mage_Payment_Model_Me
 	protected $_canCapture = true;
 	protected $_canCapturePartial = false;
 	protected $_canRefund = true;
+	protected $_canRefundInvoicePartial = true;
 	protected $_canVoid = false;
 	protected $_canUseInternal = false;
 	protected $_canUseCheckout = true;
