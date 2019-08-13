@@ -74,6 +74,7 @@ class Cardsave_Cardsaveonlinepayments_PaymentController extends Mage_Core_Contro
     	$order = Mage::getModel('sales/order');
 		$order->load(Mage::getSingleton('checkout/session')->getLastOrderId());
     	$boCartIsEmpty = false;
+		$model = Mage::getModel('cardsaveonlinepayments/direct');
     	
     	try
     	{
@@ -140,6 +141,13 @@ class Cardsave_Cardsaveonlinepayments_PaymentController extends Mage_Core_Contro
     	}
     	else
     	{
+			//if customstock not enabled reduce the stock as not previously deducted.
+			$isCustomStockManagementEnabled = Mage::getModel('cardsaveonlinepayments/direct')->getConfigData('customstockmanagementenabled');
+			if(!$isCustomStockManagementEnabled)
+			{
+				$model->subtractOrderedItemsFromStock($order); 
+			}
+			
 		  	// set the quote as inactive after back from paypal
 		 	Mage::getSingleton('checkout/session')->getQuote()->setIsActive(false)->save();
 	
@@ -287,6 +295,13 @@ class Cardsave_Cardsaveonlinepayments_PaymentController extends Mage_Core_Contro
     	}
     	else
     	{
+			//if customstock not enabled reduced the stock as not previously deducted.
+			$isCustomStockManagementEnabled = Mage::getModel('cardsaveonlinepayments/direct')->getConfigData('customstockmanagementenabled');
+			if(!$isCustomStockManagementEnabled)
+			{
+				$model->subtractOrderedItemsFromStock($order); 
+			}
+			
     		// set the quote as inactive after back from paypal
 		    Mage::getSingleton('checkout/session')->getQuote()->setIsActive(false)->save();
 
@@ -511,6 +526,13 @@ class Cardsave_Cardsaveonlinepayments_PaymentController extends Mage_Core_Contro
 		}
 		else
 		{		
+			//if customstock not enabled reduced the stock as not previously deducted.
+			$isCustomStockManagementEnabled = Mage::getModel('cardsaveonlinepayments/direct')->getConfigData('customstockmanagementenabled');
+			if(!$isCustomStockManagementEnabled)
+			{
+				$model->subtractOrderedItemsFromStock($order); 
+			}
+			
 		   	// set the quote as inactive after back from paypal
 			Mage::getSingleton('checkout/session')->getQuote()->setIsActive(false)->save();
 		
@@ -782,7 +804,14 @@ class Cardsave_Cardsaveonlinepayments_PaymentController extends Mage_Core_Contro
 		    Mage::getSingleton('checkout/session')->getQuote()->setIsActive(false)->save();
 		    
 		    if($boCartIsEmpty == false)
-		    {
+		    {	
+				//if customstock not enabled reduced the stock as not previously deducted.
+				$isCustomStockManagementEnabled = Mage::getModel('cardsaveonlinepayments/direct')->getConfigData('customstockmanagementenabled');
+				if(!$isCustomStockManagementEnabled)
+				{
+					$model->subtractOrderedItemsFromStock($order); 
+				}
+			
 			    // send confirmation email to customer
 		        if($order->getId())
 		        {

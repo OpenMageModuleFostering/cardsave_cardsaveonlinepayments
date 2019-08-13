@@ -58,7 +58,20 @@ class Cardsave_Sales_Model_Service_Quote extends Mage_Sales_Model_Service_Quote
 	        }
 	        // make sure the customer can still use the quote if payment is failed
 	        //$quote->setIsActive(false);
-	
+			
+			//check if direct isnt enabled.. if its not check the custom stock setting
+			$model = Mage::getModel('cardsaveonlinepayments/direct');
+			$pmPaymentMode = $model->getConfigData('mode');
+			if ($pmPaymentMode != 'direct'){
+				//if customstock not enabled DO NOT reduce stock
+				$isCustomStockManagementEnabled = Mage::getModel('cardsaveonlinepayments/direct')->getConfigData('customstockmanagementenabled');
+				if(!$isCustomStockManagementEnabled)
+				{
+					$quote->setInventoryProcessed(true);  
+				}
+			}
+			
+			
 	        $transaction->addObject($order);
 	        $transaction->addCommitCallback(array($order, 'place'));
 	        $transaction->addCommitCallback(array($order, 'save'));

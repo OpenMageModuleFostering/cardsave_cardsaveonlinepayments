@@ -528,6 +528,7 @@ class Cardsave_Cardsaveonlinepayments_Model_Direct extends Mage_Payment_Model_Me
 					
 					// add the success message
 					Mage::getSingleton('core/session')->addSuccess($szNotificationMessage);
+					
 					break;
 				case 3:
 					// status code of 3 - means 3D Secure authentication required
@@ -543,6 +544,15 @@ class Cardsave_Cardsaveonlinepayments_Model_Direct extends Mage_Payment_Model_Me
 					
 					Mage::getSingleton('checkout/session')->setRedirectionmethod('_run3DSecureTransaction');
 					$order->setIsThreeDSecurePending(true);
+					
+					//if customstock not enabled re-add the stock as previously deducted.
+					$isCustomStockManagementEnabled = Mage::getModel('cardsaveonlinepayments/direct')->getConfigData('customstockmanagementenabled');
+					if(!$isCustomStockManagementEnabled)
+					{
+						$model = Mage::getModel('cardsaveonlinepayments/direct');
+						$model->addOrderedItemsToStock($order); 
+					}
+					
 					
 					break;
 				case 5:
@@ -724,13 +734,14 @@ class Cardsave_Cardsaveonlinepayments_Model_Direct extends Mage_Payment_Model_Me
 		{
 			$szCustomerName = $szCustomerName.' '.$billingAddress->getlastname();
 		}
-		$szAddress1 = $billingAddress->getStreet1();
-		$szAddress2 = $billingAddress->getStreet2();
-		$szAddress3 = $billingAddress->getStreet3();
-		$szAddress4 = $billingAddress->getStreet4();
-		$szCity = $billingAddress->getCity();
-		$szState = $billingAddress->getRegion();
-		$szPostCode = $billingAddress->getPostcode();
+		$szCustomerName = substr($szCustomerName, 0,100);
+		$szAddress1 = substr($billingAddress->getStreet1(),0,100);
+		$szAddress2 = substr($billingAddress->getStreet2(),0,50);
+		$szAddress3 = substr($billingAddress->getStreet3(),0,50);
+		$szAddress4 = substr($billingAddress->getStreet4(),0,50);
+		$szCity 	= substr($billingAddress->getCity(),0,50);
+		$szState 	= substr($billingAddress->getRegion(),0,50);
+		$szPostCode = substr($billingAddress->getPostcode(),0,50);
 		
 		if($this->getConfigData('cv2mandatory'))
 		{
@@ -1361,6 +1372,7 @@ class Cardsave_Cardsaveonlinepayments_Model_Direct extends Mage_Payment_Model_Me
 	 */
 	public function setPaymentAdditionalInformation($payment, $szCrossReference)
     {
+	
     	$arAdditionalInformationArray = array();
     	
     	$paymentAction = $this->getConfigData('payment_action');
@@ -1386,7 +1398,8 @@ class Cardsave_Cardsaveonlinepayments_Model_Direct extends Mage_Payment_Model_Me
     	$payment->setAdditionalInformation($arAdditionalInformationArray);
     }
     
-    /**
+    
+	 /**
      * Deduct the order items from the stock
      *
      * @param unknown_type $order
@@ -1394,10 +1407,7 @@ class Cardsave_Cardsaveonlinepayments_Model_Direct extends Mage_Payment_Model_Me
     public function subtractOrderedItemsFromStock($order)
     {
     	$nVersion = Mage::getModel('cardsaveonlinepayments/direct')->getVersion();
-    	$isCustomStockManagementEnabled = Mage::getModel('cardsaveonlinepayments/direct')->getConfigData('customstockmanagementenabled');
-    	
-    	if($isCustomStockManagementEnabled)
-    	{
+
 	    	$items = $order->getAllItems();
 			foreach ($items as $itemId => $item)
 			{
@@ -1414,7 +1424,6 @@ class Cardsave_Cardsaveonlinepayments_Model_Direct extends Mage_Payment_Model_Me
 					$stock->save();
 				}
 			}
-    	}
     }
 	
     /**
@@ -1424,11 +1433,9 @@ class Cardsave_Cardsaveonlinepayments_Model_Direct extends Mage_Payment_Model_Me
      */
     public function addOrderedItemsToStock($order)
     {
+
     	$nVersion = Mage::getModel('cardsaveonlinepayments/direct')->getVersion();
-    	$isCustomStockManagementEnabled = Mage::getModel('cardsaveonlinepayments/direct')->getConfigData('customstockmanagementenabled');
-		
-    	if($isCustomStockManagementEnabled)
-    	{
+
 	    	$items = $order->getAllItems();
 			foreach ($items as $itemId => $item)
 			{
@@ -1445,7 +1452,7 @@ class Cardsave_Cardsaveonlinepayments_Model_Direct extends Mage_Payment_Model_Me
 					$stock->save();
 				}
 			}
-    	}
+ 
     }
     
     /**
@@ -1631,6 +1638,7 @@ class Cardsave_Cardsaveonlinepayments_Model_Direct extends Mage_Payment_Model_Me
      */
     private function _captureAuthorizedPayment(Varien_Object $payment)
     {
+	
     	$error = false;
     	$session = Mage::getSingleton('checkout/session');
     	

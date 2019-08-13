@@ -21,7 +21,7 @@ class Cardsave_Sales_Model_Order_Invoice extends Mage_Sales_Model_Order_Invoice
 	public function pay()
     {
     	$nVersion = Mage::getModel('cardsaveonlinepayments/direct')->getVersion();
-    	
+		
     	if($nVersion >= 1400)
     	{
 	        if ($this->_wasPayCalled)

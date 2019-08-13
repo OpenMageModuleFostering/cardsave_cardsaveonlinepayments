@@ -10,7 +10,6 @@ class Cardsave_Sales_Model_Order_Payment extends Mage_Sales_Model_Order_Payment
      */
     public function place()
    {
-	
     	Mage::dispatchEvent('sales_order_payment_place_start', array('payment' => $this));
         $order = $this->getOrder();
 
@@ -58,7 +57,7 @@ class Cardsave_Sales_Model_Order_Payment extends Mage_Sales_Model_Order_Payment
                 }
             }
         }
-
+			
         $this->_createBillingAgreement();
 
         $orderIsNotified = null;
