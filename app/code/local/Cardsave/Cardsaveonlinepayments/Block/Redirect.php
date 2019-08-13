@@ -185,7 +185,13 @@ class Cardsave_Cardsaveonlinepayments_Block_Redirect extends Mage_Core_Block_Abs
       	$form->addField("StartDateMonth", 'hidden', array('name'=>"StartDateMonth", 'value'=>Mage::getSingleton('checkout/session')->getStartdatemonth()));
       	$form->addField("StartDateYear", 'hidden', array('name'=>"StartDateYear", 'value'=>Mage::getSingleton('checkout/session')->getStartdateyear()));
       	$form->addField("IssueNumber", 'hidden', array('name'=>"IssueNumber", 'value'=>Mage::getSingleton('checkout/session')->getIssuenumber()));
-      	$form->addField("CV2", 'hidden', array('name'=>"CV2", 'value'=>Mage::getSingleton('checkout/session')->getCv2()));	
+      	$form->addField("CV2", 'hidden', array('name'=>"CV2", 'value'=>Mage::getSingleton('checkout/session')->getCv2()));
+		$form->addField("PostAuthCompatMode", 'hidden', array('name'=>"PostAuthCompatMode", 'value'=>"false"));
+		$form->addField("ThreeDSecureCompatMode", 'hidden', array('name'=>"ThreeDSecureCompatMode", 'value'=>"false"));
+		$form->addField("EchoAVSCheckResult", 'hidden', array('name'=>"EchoAVSCheckResult", 'value'=>"true"));
+		$form->addField("EchoCV2CheckResult", 'hidden', array('name'=>"EchoCV2CheckResult", 'value'=>"true"));
+		$form->addField("EchoThreeDSecureAuthenticationCheckResult", 'hidden', array('name'=>"EchoThreeDSecureAuthenticationCheckResult", 'value'=>"true"));
+		$form->addField("EchoCardType", 'hidden', array('name'=>"EchoCardType", 'value'=>"true"));
       	
        	 // reset the session items
         Mage::getSingleton('checkout/session')->setHashdigest(null)
@@ -247,6 +253,8 @@ class Cardsave_Cardsaveonlinepayments_Block_Redirect extends Mage_Core_Block_Abs
       	$form->addField("TransactionDateTime", 'hidden', array('name'=>"TransactionDateTime", 'value'=>Mage::getSingleton('checkout/session')->getTransactiondatetime()));
       	$form->addField("CallbackURL", 'hidden', array('name'=>"CallbackURL", 'value'=>Mage::getSingleton('checkout/session')->getCallbackurl()));
       	$form->addField("PaRES", 'hidden', array('name'=>"PaRES", 'value'=>Mage::getSingleton('checkout/session')->getPares()));
+		$form->addField("PostAuthCompatMode", 'hidden', array('name'=>"PostAuthCompatMode", 'value'=>"false"));
+		$form->addField("ThreeDSecureCompatMode", 'hidden', array('name'=>"ThreeDSecureCompatMode", 'value'=>"false"));
       	
        	 // reset the session items
         Mage::getSingleton('checkout/session')->setHashdigest(null)

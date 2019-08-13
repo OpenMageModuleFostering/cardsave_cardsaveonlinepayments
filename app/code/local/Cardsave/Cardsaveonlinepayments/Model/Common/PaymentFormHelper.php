@@ -352,6 +352,8 @@
 									'PostCode='.$formVariables['PostCode'].'&'.
 									'CountryCode='.$formVariables['CountryCode'];
 			
+			echo $szStringBeforeHash;
+			
 			if ($hmHashMethod == Cardsave_Cardsaveonlinepayments_Model_Source_HashMethod::HASH_METHOD_MD5 ||
 				$hmHashMethod == Cardsave_Cardsaveonlinepayments_Model_Source_HashMethod::HASH_METHOD_SHA1)
 			{
@@ -384,12 +386,35 @@
 			
 			$szStringBeforeHash = 'MerchantID='.$formVariables['MerchantID'].'&'.
 									'Password='.$szPassword.'&'.
+									'StatusCode='.$formVariables['StatusCode'].'&'.
+									'Message='.$formVariables['Message'].'&'.
+									'PreviousStatusCode='.$formVariables['PreviousStatusCode'].'&'.
+									'PreviousMessage='.$formVariables['PreviousMessage'].'&'.
+									'CrossReference='.$formVariables['CrossReference'].'&'.
+									'AddressNumericCheckResult='.$formVariables['AddressNumericCheckResult'].'&'.
+									'PostCodeCheckResult='.$formVariables['PostCodeCheckResult'].'&'.
+									'CV2CheckResult='.$formVariables['CV2CheckResult'].'&'.
+									'ThreeDSecureAuthenticationCheckResult='.$formVariables['ThreeDSecureAuthenticationCheckResult'].'&'.
+									'CardType='.$formVariables['CardType'].'&'.
+									'CardClass='.$formVariables['CardClass'].'&'.
+									'CardIssuer='.$formVariables['CardIssuer'].'&'.
+									'CardIssuerCountryCode='.$formVariables['CardIssuerCountryCode'].'&'.
 									'Amount='.$formVariables['Amount'].'&'.
 									'CurrencyCode='.$formVariables['CurrencyCode'].'&'.
 									'OrderID='.$formVariables['OrderID'].'&'.
 									'TransactionType='.$formVariables['TransactionType'].'&'.
 									'TransactionDateTime='.$formVariables['TransactionDateTime'].'&'.
-									'OrderDescription='.$formVariables['OrderDescription'];
+									'OrderDescription='.$formVariables['OrderDescription'].'&'.
+									'Address1='.$formVariables['Address1'].'&'.
+									'Address2='.$formVariables['Address2'].'&'.
+									'Address3='.$formVariables['Address3'].'&'.
+									'Address4='.$formVariables['Address4'].'&'.
+									'City='.$formVariables['City'].'&'.
+									'State='.$formVariables['State'].'&'.
+									'PostCode='.$formVariables['PostCode'].'&'.
+									'CountryCode='.$formVariables['CountryCode'].'&'.																
+									'EmailAddress='.$formVariables['EmailAddress'].'&'.																
+									'PhoneNumber='.$formVariables['PhoneNumber'];																
 			
 			if ($hmHashMethod == Cardsave_Cardsaveonlinepayments_Model_Source_HashMethod::HASH_METHOD_MD5 ||
 				$hmHashMethod == Cardsave_Cardsaveonlinepayments_Model_Source_HashMethod::HASH_METHOD_SHA1)

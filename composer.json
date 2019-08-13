@@ -3,7 +3,7 @@
     "type": "magento-module",
     "license": "GPL",
     "homepage": "",
-    "description": "Payment Plugin for the CardSave Payment Gateway.",
+    "description": "CardSave Payment Extension (Official)",
     "authors": [
     {
         "name": "CardSave",

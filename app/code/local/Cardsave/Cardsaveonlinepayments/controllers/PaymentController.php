@@ -690,6 +690,18 @@ class Cardsave_Cardsaveonlinepayments_PaymentController extends Mage_Core_Contro
 		    $formVariables['State'] = $this->getRequest()->getPost('State');
 		    $formVariables['PostCode'] = $this->getRequest()->getPost('PostCode');
 		    $formVariables['CountryCode'] = $this->getRequest()->getPost('CountryCode');
+			
+		    $formVariables['AddressNumericCheckResult'] = $this->getRequest()->getPost('AddressNumericCheckResult');
+		    $formVariables['PostCodeCheckResult'] = $this->getRequest()->getPost('PostCodeCheckResult');
+		    $formVariables['CV2CheckResult'] = $this->getRequest()->getPost('CV2CheckResult');
+		    $formVariables['ThreeDSecureAuthenticationCheckResult'] = $this->getRequest()->getPost('ThreeDSecureAuthenticationCheckResult');
+		    $formVariables['CardType'] = $this->getRequest()->getPost('CardType');
+		    $formVariables['CardClass'] = $this->getRequest()->getPost('CardClass');
+		    $formVariables['CardIssuer'] = $this->getRequest()->getPost('CardIssuer');
+		    $formVariables['CardIssuerCountryCode'] = $this->getRequest()->getPost('CardIssuerCountryCode');
+			
+		    $formVariables['EmailAddress'] = $this->getRequest()->getPost('EmailAddress');
+		    $formVariables['PhoneNumber'] = $this->getRequest()->getPost('PhoneNumber');
 		    
 		    if(!CSV_PaymentFormHelper::comparePaymentCompleteHashDigest($formVariables, $szPassword, $hmHashMethod, $szPreSharedKey))
 	    	{
