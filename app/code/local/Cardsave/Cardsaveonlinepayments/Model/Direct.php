@@ -1082,6 +1082,8 @@ class Cardsave_Cardsaveonlinepayments_Model_Direct extends Mage_Payment_Model_Me
 		if ($soapSuccess == false)
 		{
 			// could not communicate with the payment gateway
+			//set error flag
+			$error = true;
 			$szLogMessage = Cardsave_Cardsaveonlinepayments_Model_Common_GlobalErrors::ERROR_431;
 			$message = Cardsave_Cardsaveonlinepayments_Model_Common_GlobalErrors::ERROR_431;
 			Mage::log($szLogMessage);
