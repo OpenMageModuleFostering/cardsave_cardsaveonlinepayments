@@ -215,6 +215,8 @@ class Cardsave_Cardsaveonlinepayments_Model_Direct extends Mage_Payment_Model_Me
 	 */
 	public function _runTransaction(Varien_Object $payment, $amount)
 	{
+		$takePaymentInStoreBaseCurrency = $this->getConfigData('takePaymentInStoreBaseCurrency');
+		
 		$error = '';
 		$session = Mage::getSingleton('checkout/session');
 		$nVersion = $this->getVersion();
@@ -278,16 +280,33 @@ class Cardsave_Cardsaveonlinepayments_Model_Direct extends Mage_Payment_Model_Me
 
 		$cdtCardDetailsTransaction->getTransactionDetails()->getMessageDetails()->setTransactionType($szTransactionType);
 
-		if ($szCurrencyShort != '' &&
-			$iclISOCurrencyList->getISOCurrency($szCurrencyShort, $icISOCurrency))
-		{
-			$nCurrencyCode = new CSV_NullableInt($icISOCurrency->getISOCode());
-			$cdtCardDetailsTransaction->getTransactionDetails()->getCurrencyCode()->setValue($icISOCurrency->getISOCode());
+		if (!$takePaymentInStoreBaseCurrency) {	
+			// Take payment in order currency
+			$szCurrencyShort = $order->getOrderCurrency()->getCurrencyCode();
+			if ($szCurrencyShort != '' && $iclISOCurrencyList->getISOCurrency($szCurrencyShort, $icISOCurrency))
+			{
+				$nCurrencyCode = $icISOCurrency->getISOCode();
+				$cdtCardDetailsTransaction->getTransactionDetails()->getCurrencyCode()->setValue($icISOCurrency->getISOCode());
+			}
+			
+			// Calculate amount
+			$power = pow(10, $icISOCurrency->getExponent());
+			$nAmount = round($order->getGrandTotal() * $power,0);			
+		} else {
+			// Take payment in site base currency
+			//$szCurrencyShort = $order->getOrderCurrency()->getCurrencyCode();
+			$szCurrencyShort = $order->getBaseCurrencyCode();
+			if ($szCurrencyShort != '' && $iclISOCurrencyList->getISOCurrency($szCurrencyShort, $icISOCurrency))
+			{
+				$nCurrencyCode = $icISOCurrency->getISOCode();
+				$cdtCardDetailsTransaction->getTransactionDetails()->getCurrencyCode()->setValue($icISOCurrency->getISOCode());
+			}
+			
+			// Calculate amount
+			$nAmount = $this->_getRoundedAmount($amount, $icISOCurrency->getExponent());			
 		}
-		
-		$nDecimalAmount = $this->_getRoundedAmount($amount, $icISOCurrency->getExponent());
-		
-		$cdtCardDetailsTransaction->getTransactionDetails()->getAmount()->setValue($nDecimalAmount);
+				
+		$cdtCardDetailsTransaction->getTransactionDetails()->getAmount()->setValue($nAmount);
 	
 		$cdtCardDetailsTransaction->getTransactionDetails()->setOrderID($szOrderID);
 		$cdtCardDetailsTransaction->getTransactionDetails()->setOrderDescription($szOrderDescription);
@@ -462,6 +481,8 @@ class Cardsave_Cardsaveonlinepayments_Model_Direct extends Mage_Payment_Model_Me
 	 */
 	public function _runHostedPaymentTransaction(Varien_Object $payment, $amount)
 	{
+		$takePaymentInStoreBaseCurrency = $this->getConfigData('takePaymentInStoreBaseCurrency');
+		
 		$session = Mage::getSingleton('checkout/session');
 		$nVersion = $this->getVersion();
 		
@@ -519,16 +540,31 @@ class Cardsave_Cardsaveonlinepayments_Model_Direct extends Mage_Payment_Model_Me
 				$szServerResultURLCookieVariables .= "@@";
 			}
 		}
-		
-		$szCurrencyShort = $order->getOrderCurrency()->getCurrencyCode();
-		if ($szCurrencyShort != '' &&
-			$iclISOCurrencyList->getISOCurrency($szCurrencyShort, $icISOCurrency))
-		{
-			$nCurrencyCode = $icISOCurrency->getISOCode();
+				
+		if (!$takePaymentInStoreBaseCurrency) {	
+			// Take payment in order currency
+			$szCurrencyShort = $order->getOrderCurrency()->getCurrencyCode();
+			if ($szCurrencyShort != '' && $iclISOCurrencyList->getISOCurrency($szCurrencyShort, $icISOCurrency))
+			{
+				$nCurrencyCode = $icISOCurrency->getISOCode();
+			}
+			
+			// Calculate amount
+			$power = pow(10, $icISOCurrency->getExponent());
+			$nAmount = round($order->getGrandTotal() * $power,0);			
+		} else {
+			// Take payment in site base currency
+			//$szCurrencyShort = $order->getOrderCurrency()->getCurrencyCode();
+			$szCurrencyShort = $order->getBaseCurrencyCode();
+			if ($szCurrencyShort != '' && $iclISOCurrencyList->getISOCurrency($szCurrencyShort, $icISOCurrency))
+			{
+				$nCurrencyCode = $icISOCurrency->getISOCode();
+			}
+			
+			// Calculate amount
+			$nAmount = $this->_getRoundedAmount($amount, $icISOCurrency->getExponent());			
 		}
-		
-		$nAmount = $this->_getRoundedAmount($amount, $icISOCurrency->getExponent());
-		
+				
 		$szISO2CountryCode = $billingAddress->getCountry();
 		$szCountryShort = $this->_getISO3Code($szISO2CountryCode);
 		if($iclISOCountryList->getISOCountry($szCountryShort, $icISOCountry))
@@ -647,6 +683,8 @@ class Cardsave_Cardsaveonlinepayments_Model_Direct extends Mage_Payment_Model_Me
 	 */
 	public function _runTransparentRedirectTransaction(Varien_Object $payment, $amount)
 	{
+		$takePaymentInStoreBaseCurrency = $this->getConfigData('takePaymentInStoreBaseCurrency');
+		
 		$GLOBALS['m_boPayInvoice'] = false;
 		$payment->setIsTransactionPending(true);
 		$nVersion = $this->getVersion();
@@ -663,14 +701,29 @@ class Cardsave_Cardsaveonlinepayments_Model_Direct extends Mage_Payment_Model_Me
 		$szStartDateMonth = '';
 		$szStartDateYear = '';
 		
-		$szCurrencyShort = $order->getOrderCurrency()->getCurrencyCode();
-		if ($szCurrencyShort != '' &&
-			$iclISOCurrencyList->getISOCurrency($szCurrencyShort, $icISOCurrency))
-		{
-			$nCurrencyCode = $icISOCurrency->getISOCode();
+		if (!$takePaymentInStoreBaseCurrency) {	
+			// Take payment in order currency
+			$szCurrencyShort = $order->getOrderCurrency()->getCurrencyCode();
+			if ($szCurrencyShort != '' && $iclISOCurrencyList->getISOCurrency($szCurrencyShort, $icISOCurrency))
+			{
+				$nCurrencyCode = $icISOCurrency->getISOCode();
+			}
+			
+			// Calculate amount
+			$power = pow(10, $icISOCurrency->getExponent());
+			$nAmount = round($order->getGrandTotal() * $power,0);			
+		} else {
+			// Take payment in site base currency
+			//$szCurrencyShort = $order->getOrderCurrency()->getCurrencyCode();
+			$szCurrencyShort = $order->getBaseCurrencyCode();
+			if ($szCurrencyShort != '' && $iclISOCurrencyList->getISOCurrency($szCurrencyShort, $icISOCurrency))
+			{
+				$nCurrencyCode = $icISOCurrency->getISOCode();
+			}
+			
+			// Calculate amount
+			$nAmount = $this->_getRoundedAmount($amount, $icISOCurrency->getExponent());			
 		}
-		
-		$nAmount = $this->_getRoundedAmount($amount, $icISOCurrency->getExponent());
 		
 		$szOrderID = $payment->getOrder()->increment_id;
 		//date time with 2008-12-01 14:12:00 +01:00 format
@@ -1389,6 +1442,8 @@ class Cardsave_Cardsaveonlinepayments_Model_Direct extends Mage_Payment_Model_Me
      */
     private function _runCrossReferenceTransaction(Varien_Object $payment, $szTransactionType, $amount = false)
     {
+		$takePaymentInStoreBaseCurrency = $this->getConfigData('takePaymentInStoreBaseCurrency');
+		
     	$error = false;
     	$boTransactionProcessed = false;
     	$PaymentProcessorFullDomain;
@@ -1439,14 +1494,11 @@ class Cardsave_Cardsaveonlinepayments_Model_Direct extends Mage_Payment_Model_Me
 	    	$crtCrossReferenceTransaction->getMerchantAuthentication()->setMerchantID($szMerchantID);
 			$crtCrossReferenceTransaction->getMerchantAuthentication()->setPassword($szPassword);
 			
-			// if no amount is specified get the grand total amount
-			if($amount === false)
-			{
-				$nAmount = $order->getBaseGrandTotal();
-			}
-			else
-			{
-				$nAmount = $amount;
+			if (!$takePaymentInStoreBaseCurrency) {		
+				$power = pow(10, $icISOCurrency->getExponent());
+				$nAmount = round($order->getGrandTotal() * $power,0);
+			} else {
+				$nAmount = $this->_getRoundedAmount($amount, $icISOCurrency->getExponent());
 			}
 
 			$szCurrencyShort = $order->getOrderCurrency()->getCurrencyCode();
@@ -1458,10 +1510,10 @@ class Cardsave_Cardsaveonlinepayments_Model_Direct extends Mage_Payment_Model_Me
 			}
 			
 			// round the amount before use
-			$nDecimalAmount = $this->_getRoundedAmount($nAmount, $icISOCurrency->getExponent());
+			//$nDecimalAmount = $this->_getRoundedAmount($nAmount, $icISOCurrency->getExponent());
 			
 			$crtCrossReferenceTransaction->getTransactionDetails()->setOrderID($szOrderID);
-			$crtCrossReferenceTransaction->getTransactionDetails()->getAmount()->setValue($nDecimalAmount);
+			$crtCrossReferenceTransaction->getTransactionDetails()->getAmount()->setValue($nAmount);
 			
 			$crtCrossReferenceTransaction->getTransactionDetails()->getMessageDetails()->setCrossReference($szCrossReference);
 			$crtCrossReferenceTransaction->getTransactionDetails()->getMessageDetails()->setTransactionType($szTransactionType);

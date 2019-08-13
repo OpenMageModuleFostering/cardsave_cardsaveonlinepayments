@@ -352,7 +352,7 @@
 									'PostCode='.$formVariables['PostCode'].'&'.
 									'CountryCode='.$formVariables['CountryCode'];
 			
-			echo $szStringBeforeHash;
+			//echo $szStringBeforeHash;
 			
 			if ($hmHashMethod == Cardsave_Cardsaveonlinepayments_Model_Source_HashMethod::HASH_METHOD_MD5 ||
 				$hmHashMethod == Cardsave_Cardsaveonlinepayments_Model_Source_HashMethod::HASH_METHOD_SHA1)

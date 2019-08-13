@@ -42,11 +42,21 @@
           <info_cc>Cardsave_Cardsaveonlinepayments_Block_Payment_Info_Cc</info_cc>
         </rewrite>
       </payment>
+	  <checkout>
+		<rewrite>
+		  <cart_totals>Cardsave_Checkout_Block_Cart_Totals</cart_totals>
+		</rewrite>
+	  </checkout>
+	  <sales>
+		<rewrite>
+		  <order_totals>Cardsave_Sales_Block_Order_Totals</order_totals>
+		</rewrite>
+	  </sales>
       <adminhtml>
         <rewrite>
           <sales_order_payment>Cardsave_Cardsaveonlinepayments_Block_Adminhtml_Sales_Order_Payment</sales_order_payment>
         </rewrite>
-      </adminhtml>
+      </adminhtml>	  
     </blocks>
     <!-- Define the helper class type -->
     <helpers>
@@ -118,6 +128,7 @@
         <resultdeliverymethod>POST</resultdeliverymethod>
         <allowspecific>0</allowspecific>
 		<customstockmanagementenabled>1</customstockmanagementenabled>
+		<takePaymentInStoreBaseCurrency>1</takePaymentInStoreBaseCurrency>
       </cardsaveonlinepayments>
     </payment>
   </default>
