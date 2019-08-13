@@ -74,7 +74,7 @@ class Cardsave_Cardsaveonlinepayments_Block_Redirect extends Mage_Core_Block_Abs
         $form->addField("ResultDeliveryMethod", 'hidden', array('name'=>"ResultDeliveryMethod", 'value'=>Mage::getSingleton('checkout/session')->getResultdeliverymethod()));
         $form->addField("ServerResultURL", 'hidden', array('name'=>"ServerResultURL", 'value'=>Mage::getSingleton('checkout/session')->getServerresulturl()));
         $form->addField("PaymentFormDisplaysResult", 'hidden', array('name'=>"PaymentFormDisplaysResult", 'value'=>Mage::getSingleton('checkout/session')->getPaymentformdisplaysresult()));
-		$form->addField("ServerResultURLCookieVariables", 'hidden', array('name'=>"ServerResultURLCookieVariables", 'value'=>Mage::getSingleton('checkout/session')->getServerresulturlcookievariables()));
+		$form->addField("ServerResultURLCookieVariables", 'hidden', array('name'=>"ServerResultURLCookieVariables", 'value'=>''));
         $form->addField("ServerResultURLFormVariables", 'hidden', array('name'=>"ServerResultURLFormVariables", 'value'=>Mage::getSingleton('checkout/session')->getServerresulturlformvariables()));
         $form->addField("ServerResultURLQueryStringVariables", 'hidden', array('name'=>"ServerResultURLQueryStringVariables", 'value'=>Mage::getSingleton('checkout/session')->getServerresulturlquerystringvariables()));
         

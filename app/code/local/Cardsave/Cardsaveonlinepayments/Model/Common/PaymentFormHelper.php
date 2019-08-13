@@ -166,7 +166,7 @@
 									'ResultDeliveryMethod='.$rdmResultdeliveryMethod.'&'.
 									'ServerResultURL='.$szServerResultURL.'&'.
 									'PaymentFormDisplaysResult='.$boPaymentFormDisplaysResult.'&'.
-									'ServerResultURLCookieVariables='.$szServerResultURLCookieVariables.'&'.
+									'ServerResultURLCookieVariables='.''.'&'.
 									'ServerResultURLFormVariables='.$szServerResultURLFormVariables.'&'.
 									'ServerResultURLQueryStringVariables='.$szServerResultURLQueryStringVariables;
 			

@@ -5,11 +5,14 @@ if (!defined('COMPILER_INCLUDE_PATH')) {
 	include_once ("Common/PaymentFormHelper.php");
 	include_once ("Common/ISOCurrencies.php");
 	include_once ("Common/ISOCountries.php");
+	// include some CardSave functions
+	include_once ("CommonFunctions.php");
 } else {
     include_once ("Cardsave_Cardsaveonlinepayments_Model_Common_ThePaymentGateway_PaymentSystem.php");
 	include_once ("Cardsave_Cardsaveonlinepayments_Model_Common_PaymentFormHelper.php");
 	include_once ("Cardsave_Cardsaveonlinepayments_Model_Common_ISOCurrencies.php");
 	include_once ("Cardsave_Cardsaveonlinepayments_Model_Common_ISOCountries.php");
+	include_once ("Cardsave_Cardsaveonlinepayments_Model_CommonFunctions.php");
 }
 
 class Cardsave_Cardsaveonlinepayments_Model_Direct extends Mage_Payment_Model_Method_Abstract
@@ -228,7 +231,7 @@ class Cardsave_Cardsaveonlinepayments_Model_Direct extends Mage_Payment_Model_Me
 		// assign payment form field values to variables
 		$order = $payment->getOrder();
 		$szOrderID = $payment->getOrder()->increment_id;
-		$szOrderDescription = '';
+		$szOrderDescription = Mage::app()->getStore()->getName();
 		$szCardName = $payment->getCcOwner();
 		$szCardNumber = $payment->getCcNumber();
 		$szIssueNumber = $payment->getCcSsIssue();
@@ -251,14 +254,10 @@ class Cardsave_Cardsaveonlinepayments_Model_Direct extends Mage_Payment_Model_Me
 		$nDecimalAmount;
 		$szTransactionType;
 		
-		$PaymentProcessorFullDomain = $this->_getPaymentProcessorFullDomain();
 		$iclISOCurrencyList = CSV_ISOCurrencies::getISOCurrencyList();
 		$iclISOCountryList = CSV_ISOCountries::getISOCountryList();
 		
-		$rgeplRequestGatewayEntryPointList = new CSV_RequestGatewayEntryPointList();
-		$rgeplRequestGatewayEntryPointList->add("https://gw1.".$PaymentProcessorFullDomain, 100, 2);
-		$rgeplRequestGatewayEntryPointList->add("https://gw2.".$PaymentProcessorFullDomain, 200, 2);
-		$rgeplRequestGatewayEntryPointList->add("https://gw3.".$PaymentProcessorFullDomain, 300, 2);
+		
 		
 		$paymentAction = $this->getConfigData('payment_action');
 		if($paymentAction == Mage_Paygate_Model_Authorizenet::ACTION_AUTHORIZE_CAPTURE)
@@ -274,20 +273,14 @@ class Cardsave_Cardsaveonlinepayments_Model_Direct extends Mage_Payment_Model_Me
 			Mage::throwException('Unknown payment action: '.$paymentAction);
 		}
 		
-		$cdtCardDetailsTransaction = new CSV_CardDetailsTransaction($rgeplRequestGatewayEntryPointList);
-
-		$cdtCardDetailsTransaction->getMerchantAuthentication()->setMerchantID($MerchantID);
-		$cdtCardDetailsTransaction->getMerchantAuthentication()->setPassword($Password);
-
-		$cdtCardDetailsTransaction->getTransactionDetails()->getMessageDetails()->setTransactionType($szTransactionType);
-
+	
 		if (!$takePaymentInStoreBaseCurrency) {	
 			// Take payment in order currency
 			$szCurrencyShort = $order->getOrderCurrency()->getCurrencyCode();
 			if ($szCurrencyShort != '' && $iclISOCurrencyList->getISOCurrency($szCurrencyShort, $icISOCurrency))
 			{
 				$nCurrencyCode = $icISOCurrency->getISOCode();
-				$cdtCardDetailsTransaction->getTransactionDetails()->getCurrencyCode()->setValue($icISOCurrency->getISOCode());
+				
 			}
 			
 			// Calculate amount
@@ -300,95 +293,227 @@ class Cardsave_Cardsaveonlinepayments_Model_Direct extends Mage_Payment_Model_Me
 			if ($szCurrencyShort != '' && $iclISOCurrencyList->getISOCurrency($szCurrencyShort, $icISOCurrency))
 			{
 				$nCurrencyCode = $icISOCurrency->getISOCode();
-				$cdtCardDetailsTransaction->getTransactionDetails()->getCurrencyCode()->setValue($icISOCurrency->getISOCode());
+				
 			}
 			
 			// Calculate amount
 			$nAmount = $this->_getRoundedAmount($amount, $icISOCurrency->getExponent());			
 		}
-				
-		$cdtCardDetailsTransaction->getTransactionDetails()->getAmount()->setValue($nAmount);
-	
-		$cdtCardDetailsTransaction->getTransactionDetails()->setOrderID($szOrderID);
-		$cdtCardDetailsTransaction->getTransactionDetails()->setOrderDescription($szOrderDescription);
-	
-		$cdtCardDetailsTransaction->getTransactionDetails()->getTransactionControl()->getEchoCardType()->setValue(true);
-		$cdtCardDetailsTransaction->getTransactionDetails()->getTransactionControl()->getEchoAmountReceived()->setValue(true);
-		$cdtCardDetailsTransaction->getTransactionDetails()->getTransactionControl()->getEchoAVSCheckResult()->setValue(true);
-		$cdtCardDetailsTransaction->getTransactionDetails()->getTransactionControl()->getEchoCV2CheckResult()->setValue(true);
-		$cdtCardDetailsTransaction->getTransactionDetails()->getTransactionControl()->getThreeDSecureOverridePolicy()->setValue(true);
-		$cdtCardDetailsTransaction->getTransactionDetails()->getTransactionControl()->getDuplicateDelay()->setValue(60);
-	
-		$cdtCardDetailsTransaction->getTransactionDetails()->getThreeDSecureBrowserDetails()->getDeviceCategory()->setValue(0);
-		$cdtCardDetailsTransaction->getTransactionDetails()->getThreeDSecureBrowserDetails()->setAcceptHeaders("*/*");
-		$cdtCardDetailsTransaction->getTransactionDetails()->getThreeDSecureBrowserDetails()->setUserAgent($_SERVER["HTTP_USER_AGENT"]);
-	
-		$cdtCardDetailsTransaction->getCardDetails()->setCardName($szCardName);
-		$cdtCardDetailsTransaction->getCardDetails()->setCardNumber($szCardNumber);
-	
-		if ($payment->getCcExpMonth() != "")
-		{
-			$cdtCardDetailsTransaction->getCardDetails()->getExpiryDate()->getMonth()->setValue($payment->getCcExpMonth());
-		}
-		if ($payment->getCcExpYear() != "")
-		{
-			$cdtCardDetailsTransaction->getCardDetails()->getExpiryDate()->getYear()->setValue($payment->getCcExpYear());
-		}
-		if ($payment->getCcSsStartMonth() != "")
-		{
-			$cdtCardDetailsTransaction->getCardDetails()->getStartDate()->getMonth()->setValue($payment->getCcSsStartMonth());
-		}
-		if ($payment->getCcSsStartYear() != "")
-		{
-			$cdtCardDetailsTransaction->getCardDetails()->getStartDate()->getYear()->setValue($payment->getCcSsStartYear());
-		}
-	
-		$cdtCardDetailsTransaction->getCardDetails()->setIssueNumber($szIssueNumber);
-		$cdtCardDetailsTransaction->getCardDetails()->setCV2($szCV2);
-	
-		$cdtCardDetailsTransaction->getCustomerDetails()->getBillingAddress()->setAddress1($szAddress1);
-		$cdtCardDetailsTransaction->getCustomerDetails()->getBillingAddress()->setAddress2($szAddress2);
-		$cdtCardDetailsTransaction->getCustomerDetails()->getBillingAddress()->setAddress3($szAddress3);
-		$cdtCardDetailsTransaction->getCustomerDetails()->getBillingAddress()->setAddress4($szAddress4);
-		$cdtCardDetailsTransaction->getCustomerDetails()->getBillingAddress()->setCity($szCity);
-		$cdtCardDetailsTransaction->getCustomerDetails()->getBillingAddress()->setState($szState);
-		$cdtCardDetailsTransaction->getCustomerDetails()->getBillingAddress()->setPostCode($szPostCode);
 	
 		$szCountryShort = $this->_getISO3Code($szISO2CountryCode);
 		if ($iclISOCountryList->getISOCountry($szCountryShort, $icISOCountry))
 		{
-			$cdtCardDetailsTransaction->getCustomerDetails()->getBillingAddress()->getCountryCode()->setValue($icISOCountry->getISOCode());
+			
 		}
 	
-		$cdtCardDetailsTransaction->getCustomerDetails()->setEmailAddress($szEmailAddress);
-		$cdtCardDetailsTransaction->getCustomerDetails()->setPhoneNumber($szPhoneNumber);
+
+		////////////////////////////////////////////////////////////////////////////
+		////////////////////////////////////////////////////////////////////////////
+		/* php 5.4 fix */
+		////////////////////////////////////////////////////////////////////////////
+		////////////////////////////////////////////////////////////////////////////
 		
-		$boTransactionProcessed = $cdtCardDetailsTransaction->processTransaction($cdtrCardDetailsTransactionResult, $todTransactionOutputData);
+
+		//set transaction process to false and only to true if we have communicated
+		$boTransactionProcessed = false;
 		
-		if ($boTransactionProcessed == false)
+		
+		// Populate the variables from the shopping cart, which will then be used for the XML later
+		// Only change the varibles on the right hand side with the values from the shopping cart.
+		$MerchantID 		= $MerchantID;
+		$Password			= $Password;
+
+		$Amount				= $nAmount;
+		$CurrencyCode		= $icISOCurrency->getISOCode();
+		$OrderID			= $szOrderID;
+		$OrderDescription	= $szOrderDescription;
+		$TransactionType 	= $szTransactionType;
+
+		$CardName			= $szCardName;
+		$CardNumber			= $szCardNumber;
+		$ExpMonth			= $payment->getCcExpMonth();
+		$ExpYear			= $payment->getCcExpYear();
+		$CV2				= $szCV2;
+		$IssueNumber		= $szIssueNumber;
+		
+		$Address1			= $szAddress1;
+		$Address2			= $szAddress2;
+		$Address3			= $szAddress3;
+		$Address4			= $szAddress4;
+		$City				= $szCity;
+		$State				= $szState;
+		$Postcode			= $szPostCode;
+		$CountryCode		= $icISOCountry->getISOCode();
+		
+		$EmailAddress		= $szEmailAddress;
+		$PhoneNumber		= $szPhoneNumber;
+		$IPAddress			= $_SERVER['REMOTE_ADDR'];
+
+
+
+		//XML Headers used in cURL - payment processor domain is set later.... DO NOT ALTER THIS.
+		$headers = array(
+					'SOAPAction:https://www.thepaymentgateway.net/CardDetailsTransaction',
+					'Content-Type: text/xml; charset = utf-8',
+					'Connection: close'
+				);
+
+		//XML to send to the Gateway. Clean it up and make sure it doesnt exceed the characters allowed
+		$xml = '<?xml version="1.0" encoding="utf-8"?>
+		<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+			<soap:Body>
+				<CardDetailsTransaction xmlns="https://www.thepaymentgateway.net/">
+					<PaymentMessage>
+						<MerchantAuthentication MerchantID="'. trim($MerchantID) .'" Password="'. trim($Password) .'" />
+						<TransactionDetails Amount="'. $Amount .'" CurrencyCode="'. $CurrencyCode .'">
+							<MessageDetails TransactionType="'.$TransactionType.'" />
+							<OrderID>'. clean($OrderID, 50) .'</OrderID>
+							<OrderDescription>'. clean($OrderDescription, 256) . '</OrderDescription>
+								<TransactionControl>
+									<EchoCardType>TRUE</EchoCardType>
+									<EchoAVSCheckResult>TRUE</EchoAVSCheckResult>
+									<EchoCV2CheckResult>TRUE</EchoCV2CheckResult>
+									<EchoAmountReceived>TRUE</EchoAmountReceived>
+									<DuplicateDelay>20</DuplicateDelay>
+									<CustomVariables>
+										<GenericVariable Name="MyInputVariable" Value="Ping" />
+									</CustomVariables>
+								</TransactionControl>
+						</TransactionDetails>
+						<CardDetails>
+							<CardName>'. clean($CardName, 100) .'</CardName>
+							<CardNumber>'. $CardNumber .'</CardNumber>
+							<StartDate Month="" Year="" />
+							<ExpiryDate Month="'. $ExpMonth .'" Year="'. $ExpYear .'" />
+							<CV2>'. $CV2 .'</CV2>
+							<IssueNumber>'. $IssueNumber .'</IssueNumber>
+						</CardDetails>
+						<CustomerDetails>
+							<BillingAddress>
+								<Address1>'. clean($Address1, 100) .'</Address1>
+								<Address2>'. clean($Address2, 50) .'</Address2>
+								<Address3>'. clean($Address3, 50) .'</Address3>
+								<Address4>'. clean($Address4, 50) .'</Address4>
+								<City>'. clean($City, 50) .'</City>
+								<State>'. clean($State, 50) .'</State>
+								<PostCode>'. clean($Postcode, 50) .'</PostCode>
+								<CountryCode>'. $CountryCode .'</CountryCode>
+							</BillingAddress>
+							<EmailAddress>'. clean($EmailAddress, 100) .'</EmailAddress>
+							<PhoneNumber>'. clean($PhoneNumber, 30) .'</PhoneNumber>
+							<CustomerIPAddress>'. $IPAddress .'</CustomerIPAddress>
+						</CustomerDetails>
+						<PassOutData>Some data to be passed out</PassOutData>
+					</PaymentMessage>
+				</CardDetailsTransaction>
+			</soap:Body>
+		</soap:Envelope>';
+
+		//set up the gateway configuration for CardSave
+		$gwId = 1;
+		$domain = "cardsaveonlinepayments.com";
+		$port = "4430";
+		$transattempt = 1;
+		$soapSuccess = false;
+
+		while(!$soapSuccess && $gwId <= 3 && $transattempt <= 3) {		
+	
+			//builds the URL to post to (rather than it being hard coded - means we can loop through all 3 gateway servers)
+			$url = 'https://gw'.$gwId.'.'.$domain.':'.$port.'/';
+			
+			//initialise cURL
+			$curl = curl_init();
+			
+			//set the options
+			curl_setopt($curl, CURLOPT_HEADER, false);
+			curl_setopt($curl, CURLOPT_HTTPHEADER, $headers); 
+			curl_setopt($curl, CURLOPT_POST, true);
+			curl_setopt($curl, CURLOPT_URL, $url);
+			curl_setopt($curl, CURLOPT_POSTFIELDS, $xml);
+			curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+			curl_setopt($curl, CURLOPT_ENCODING, 'UTF-8');
+			curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
+			
+			//Execute cURL request
+			//$ret = returned XML
+			$ret = curl_exec($curl);
+			//$err = returned error number
+			$err = curl_errno($curl);
+			//retHead = returned XML header
+			$retHead = curl_getinfo($curl);
+			
+			//echo "<pre><xmp>" .$ret. "</xmp></pre>";
+			
+			//close cURL connection
+			curl_close($curl);
+			$curl = null;
+			
+			//if no error returned
+			if($err == 0) {
+				//Get the status code
+				$StatusCode = GetXMLValue("StatusCode", $ret, "[0-9]+");
+				
+				// if error occured... return the reason to the user
+				if($StatusCode == 30){
+					$szMessageDetail = GetXMLValue("Detail", $ret, ".+");
+					
+					//run the function to get the cause of the error
+					$CustomerMessage = getErrorFromGateway($szMessageDetail, $ret);
+				}
+				
+				if(is_numeric($StatusCode)) {
+					//request was processed correctly
+					
+						//set success flag so it will not run the request again.
+						$soapSuccess = true;
+						
+						//grab some of the most commonly used information from the response
+						$szMessage = GetXMLValue("Message", $ret, ".+");
+						$szAuthCode = GetXMLValue("AuthCode", $ret, ".+");
+						$szCrossReference = GetCrossReference($ret);
+						$szAddressNumericCheckResult = GetXMLValue("AddressNumericCheckResult", $ret, ".+");
+						$szPostCodeCheckResult = GetXMLValue("PostCodeCheckResult", $ret, ".+");
+						$szCV2CheckResult = GetXMLValue("CV2CheckResult", $ret, ".+");
+						$szThreeDSecureAuthenticationCheckResult = GetXMLValue("ThreeDSecureAuthenticationCheckResult", $ret, ".+");		
+						
+						$securityChecks = "<br />Address Check: $szAddressNumericCheckResult | Post Code Check: $szPostCodeCheckResult | CV2 Check: $szCV2CheckResult |  3D Secure Check: $szThreeDSecureAuthenticationCheckResult";
+				}
+			}
+			
+			// attempt to communicate was unsuccessful... increment the transaction attempt if <=2
+			if($transattempt <=2) {
+				$transattempt++;
+			} else {
+				//reset transaction attempt to 1 & incremend $gwID (to use next numeric gateway number (eg. use gw2 rather than gw1 now))
+				$transattempt = 1;
+				$gwId++;
+			}			
+		}
+		
+		////////////////////////////////////////////////////////////////////////////
+		////////////////////////////////////////////////////////////////////////////
+		/* end php 5.4 fix */
+		////////////////////////////////////////////////////////////////////////////
+		////////////////////////////////////////////////////////////////////////////
+		
+		if ($soapSuccess == false)
 		{
 			// could not communicate with the payment gateway
 			$error = Cardsave_Cardsaveonlinepayments_Model_Common_GlobalErrors::ERROR_261;
-			if($cdtCardDetailsTransaction->getLastException())
-			{
-				$error.= " [ ". $cdtCardDetailsTransaction->getLastException() . " ]";
-			}
-			
-			$szLogMessage = "Couldn't complete transaction. Details: ".print_r($cdtrCardDetailsTransactionResult, 1)." ".print_r($todTransactionOutputData, 1);  //"Couldn't communicate with payment gateway.";
+				
+			$szLogMessage = "Couldn't complete transaction. Unable to communicate with the payment gateway.";  //"Couldn't communicate with payment gateway.";
 			Mage::log($szLogMessage);
-			Mage::log("Last exception: ".print_r($cdtCardDetailsTransaction->getLastException(), 1));
 		}
 		else
 		{
 			$szLogMessage = "Transaction could not be completed for OrderID: ".$szOrderID.". Result details: ";
-			$szNotificationMessage = 'Payment Processor Response: '.$cdtrCardDetailsTransactionResult->getMessage();
-			$szCrossReference = $todTransactionOutputData->getCrossReference();
+			$szNotificationMessage = 'Payment Processor Response: '.$szMessage;
 			
 			/* serve out the CrossReference as the TransactionId - this need to be done to enable the "Refund" button 
 			   in the Magento CreditMemo internal refund mechanism */
 			$payment->setTransactionId($szCrossReference);
 			
-			switch ($cdtrCardDetailsTransactionResult->getStatusCode())
+			switch ($StatusCode)
 			{
 				case 0:
 					// status code of 0 - means transaction successful
@@ -409,8 +534,8 @@ class Cardsave_Cardsaveonlinepayments_Model_Direct extends Mage_Payment_Model_Me
 					$szLogMessage = "3D Secure Authentication required for OrderID: ".$szOrderID.". Response object: ";
 					$szNotificationMessage = '';
 					
-					$szPaReq = $todTransactionOutputData->getThreeDSecureOutputData()->getPaREQ();
-					$szACSURL = $todTransactionOutputData->getThreeDSecureOutputData()->getACSURL();
+					$szPaReq = GetXMLValue("PaREQ", $ret, ".+");
+					$szACSURL = GetXMLValue("ACSURL", $ret, ".+");
 					
 					Mage::getSingleton('checkout/session')->setMd($szCrossReference)
 	        												->setAcsurl($szACSURL)
@@ -426,11 +551,20 @@ class Cardsave_Cardsaveonlinepayments_Model_Direct extends Mage_Payment_Model_Me
 					break;
 				case 20:
 					// status code of 20 - means duplicate transaction
-					$szPreviousTransactionMessage = $cdtrCardDetailsTransactionResult->getPreviousTransactionResult()->getMessage();
+					$soapPreviousTransactionResult = null;
+					$PreviousTransactionResult = null;
+						if (preg_match('#<PreviousTransactionResult>(.+)</PreviousTransactionResult>#iU', $ret, $soapPreviousTransactionResult)) {
+							$PreviousTransactionResult = $soapPreviousTransactionResult[1];
+							
+							$PreviousMessage = GetXMLValue("Message", $PreviousTransactionResult, ".+");
+							$PreviousStatusCode = GetXMLValue("StatusCode", $PreviousTransactionResult, ".+");
+						}
+					
+					$szPreviousTransactionMessage = $PreviousMessage;
 					$szLogMessage = "Duplicate transaction for OrderID: ".$szOrderID.". A duplicate transaction means that a transaction with these details has already been processed by the payment provider. The details of the original transaction: ".$szPreviousTransactionMessage.". Response object: ";
 					$szNotificationMessage = $szNotificationMessage.". A duplicate transaction means that a transaction with these details has already been processed by the payment provider. The details of the original transaction - Previous Transaction Response: ".$szPreviousTransactionMessage;
 					
-					if ($cdtrCardDetailsTransactionResult->getPreviousTransactionResult()->getStatusCode()->getValue() != 0)
+					if ($PreviousStatusCode != 0)
 					{
 						$error = $szNotificationMessage;
 					}
@@ -441,19 +575,11 @@ class Cardsave_Cardsaveonlinepayments_Model_Direct extends Mage_Payment_Model_Me
 					break;
 				case 30:
 					// status code of 30 - means an error occurred
-					$error = $szNotificationMessage;
-					$szLogMessage = "Transaction could not be completed for OrderID: ".$szOrderID.". Error message: ".$cdtrCardDetailsTransactionResult->getMessage();
-					if ($cdtrCardDetailsTransactionResult->getErrorMessages()->getCount() > 0)
-					{
-						$szLogMessage = $szLogMessage.".";
-	
-						for ($LoopIndex = 0; $LoopIndex < $cdtrCardDetailsTransactionResult->getErrorMessages()->getCount(); $LoopIndex++)
-						{
-							$szLogMessage = $szLogMessage.$cdtrCardDetailsTransactionResult->getErrorMessages()->getAt($LoopIndex).";";
-						}
-						$szLogMessage = $szLogMessage." ";
-					}
-					$szLogMessage = $szLogMessage.' Response object: ';
+					$CustomerMessage = getErrorFromGateway($szMessageDetail, $ret);
+					
+					$error = $szNotificationMessage . ".\nReason: " . $CustomerMessage;
+					$szLogMessage = "Transaction could not be completed for OrderID: ".$szOrderID.". Error message: ".$CustomerMessage;
+					
 					break;
 				default:
 					// unhandled status code
@@ -461,7 +587,7 @@ class Cardsave_Cardsaveonlinepayments_Model_Direct extends Mage_Payment_Model_Me
 					break;
 			}
 			
-			$szLogMessage = $szLogMessage.print_r($cdtrCardDetailsTransactionResult, 1);
+			$szLogMessage = $szLogMessage.print_r($ret, 1);
 			Mage::log($szLogMessage);
 		}
 		
@@ -833,23 +959,116 @@ class Cardsave_Cardsaveonlinepayments_Model_Direct extends Mage_Payment_Model_Me
 		$Password = $this->getConfigData('password');
 		$SecretKey = $this->getConfigData('secretkey');
 		
-		$PaymentProcessorFullDomain = $this->_getPaymentProcessorFullDomain();
+		//////////////////////////////////////////////
+		//////////////////////////////////////////////
+		// PHP 5.4 fix //
+		//////////////////////////////////////////////
+		//////////////////////////////////////////////
 		
-		$rgeplRequestGatewayEntryPointList = new CSV_RequestGatewayEntryPointList();
-		$rgeplRequestGatewayEntryPointList->add("https://gw1.".$PaymentProcessorFullDomain, 100, 2);
-		$rgeplRequestGatewayEntryPointList->add("https://gw2.".$PaymentProcessorFullDomain, 200, 2);
-		$rgeplRequestGatewayEntryPointList->add("https://gw3.".$PaymentProcessorFullDomain, 300, 2);
-		
-		$tdsaThreeDSecureAuthentication = new CSV_ThreeDSecureAuthentication($rgeplRequestGatewayEntryPointList);
-		$tdsaThreeDSecureAuthentication->getMerchantAuthentication()->setMerchantID($MerchantID);
-		$tdsaThreeDSecureAuthentication->getMerchantAuthentication()->setPassword($Password);
+		//XML Headers used in cURL - remember to change the function after thepaymentgateway.net in SOAPAction when changing the XML to call a different function
+		$headers = array(
+					'SOAPAction:https://www.thepaymentgateway.net/ThreeDSecureAuthentication',
+					'Content-Type: text/xml; charset = utf-8',
+					'Connection: close'
+				);
 
-		$tdsaThreeDSecureAuthentication->getThreeDSecureInputData()->setCrossReference($szMD);
-		$tdsaThreeDSecureAuthentication->getThreeDSecureInputData()->setPaRES($szPaRes);
 
-		$boTransactionProcessed = $tdsaThreeDSecureAuthentication->processTransaction($tdsarThreeDSecureAuthenticationResult, $todTransactionOutputData);
+		//XML to send to the Gateway - put your merchant ID & Password in the appropriate place.
+		$xml = '<?xml version="1.0" encoding="utf-8"?>
+		<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+		xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+		<soap:Body>
+		<ThreeDSecureAuthentication xmlns="https://www.thepaymentgateway.net/">
+		<ThreeDSecureMessage>
+		<MerchantAuthentication MerchantID="'. trim($MerchantID) .'" Password="'. trim($Password) .'" />
+		<ThreeDSecureInputData CrossReference="'. $szMD .'">
+		<PaRES>'. $szPaRes .'</PaRES>
+		</ThreeDSecureInputData>
+		<PassOutData>Some data to be passed out</PassOutData>
+		</ThreeDSecureMessage>
+		</ThreeDSecureAuthentication>
+		</soap:Body>
+		</soap:Envelope>';
+
+		$gwId = 1;
+		$domain = "cardsaveonlinepayments.com";
+		$port = "4430";
+		$transattempt = 1;
+		$soapSuccess = false;
 		
-		if ($boTransactionProcessed == false)
+		
+		//It will attempt each of the gateway servers (gw1, gw2 & gw3) 3 times each before totally failing
+		while(!$soapSuccess && $gwId <= 3 && $transattempt <= 3) {		
+			
+			//builds the URL to post to (rather than it being hard coded - means we can loop through all 3 gateway servers)
+			$url = 'https://gw'.$gwId.'.'.$domain.':'.$port.'/';
+			
+			//initialise cURL
+			$curl = curl_init();
+			
+			//set the options
+			curl_setopt($curl, CURLOPT_HEADER, false);
+			curl_setopt($curl, CURLOPT_HTTPHEADER, $headers); 
+			curl_setopt($curl, CURLOPT_POST, true);
+			curl_setopt($curl, CURLOPT_URL, $url);
+			curl_setopt($curl, CURLOPT_POSTFIELDS, $xml);
+			curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+			curl_setopt($curl, CURLOPT_ENCODING, 'UTF-8');
+			curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
+			
+			//Execute cURL request
+			//$ret = returned XML
+			$ret = curl_exec($curl);
+			//$err = returned error number
+			$err = curl_errno($curl);
+			//retHead = returned XML header
+			$retHead = curl_getinfo($curl);
+			
+			//close cURL connection
+			curl_close($curl);
+			$curl = null;
+			
+			//if no error returned
+			if($err == 0) {		
+				//Get the status code
+				$StatusCode = GetXMLValue("StatusCode", $ret, "[0-9]+");
+				
+				if(is_numeric($StatusCode)) {		
+					//request was processed correctly
+					if( $StatusCode != 30 ) {
+						//set success flag so it will not run the request again.
+						$soapSuccess = true;
+						
+						$szMessage = GetXMLValue("Message", $ret, ".+");
+						$szCrossReference = GetCrossReference($ret);
+						$szAddressNumericCheckResult = GetXMLValue("AddressNumericCheckResult", $ret, ".+");
+						$szPostCodeCheckResult = GetXMLValue("PostCodeCheckResult", $ret, ".+");
+						$szCV2CheckResult = GetXMLValue("CV2CheckResult", $ret, ".+");
+						$szThreeDSecureAuthenticationCheckResult = GetXMLValue("ThreeDSecureAuthenticationCheckResult", $ret, ".+");
+						
+						$securityChecks = "<br />Address Check: $szAddressNumericCheckResult | Post Code Check: $szPostCodeCheckResult | CV2 Check: $szCV2CheckResult |  3D Secure Check: $szThreeDSecureAuthenticationCheckResult";
+					}
+				}
+			}
+			
+			//increment the transaction attempt if <=2
+			if($transattempt <=2) {
+				$transattempt++;
+			} else {
+				//reset transaction attempt to 1 & incremend $gwID (to use next numeric gateway number (eg. use gw2 rather than gw1 now))
+				$transattempt = 1;
+				$gwId++;
+			}			
+		}
+
+		//////////////////////////////////////////////
+		//////////////////////////////////////////////
+		// end php 5.4 fix //
+		//////////////////////////////////////////////
+		//////////////////////////////////////////////
+		
+		if ($soapSuccess == false)
 		{
 			// could not communicate with the payment gateway
 			$szLogMessage = Cardsave_Cardsaveonlinepayments_Model_Common_GlobalErrors::ERROR_431;
@@ -858,16 +1077,14 @@ class Cardsave_Cardsaveonlinepayments_Model_Direct extends Mage_Payment_Model_Me
 		}
 		else
 		{
-			$message = "Payment Processor Response: ".$tdsarThreeDSecureAuthenticationResult->getMessage();
+			$message = "Payment Processor Response: ".$szMessage;
 			$szLogMessage = "3D Secure transaction could not be completed for OrderID: ".$szOrderID.". Response object: ";
-			$szCrossReference = $todTransactionOutputData->getCrossReference();
 			
-			switch ($tdsarThreeDSecureAuthenticationResult->getStatusCode())
+			switch ($StatusCode)
 			{
 				case 0:
 					// status code of 0 - means transaction successful
 					$szLogMessage = "3D Secure transaction successfully completed for OrderID: ".$szOrderID.". Response object: ";
-					
 					// serve out the CrossReference as a TransactionId in the Magento system
 					$this->setPaymentAdditionalInformation($payment, $szCrossReference);
 					
@@ -880,10 +1097,20 @@ class Cardsave_Cardsaveonlinepayments_Model_Direct extends Mage_Payment_Model_Me
 					break;
 				case 20:
 					// status code of 20 - means duplicate transaction
-					$szPreviousTransactionMessage = $tdsarThreeDSecureAuthenticationResult->getPreviousTransactionResult()->getMessage();
+					$soapPreviousTransactionResult = null;
+					$PreviousTransactionResult = null;
+					if (preg_match('#<PreviousTransactionResult>(.+)</PreviousTransactionResult>#iU', $ret, $soapPreviousTransactionResult)) {
+						$PreviousTransactionResult = $soapPreviousTransactionResult[1];
+							
+						$PreviousMessage = GetXMLValue("Message", $PreviousTransactionResult, ".+");
+						$PreviousStatusCode = GetXMLValue("StatusCode", $PreviousTransactionResult, ".+");
+					}
+					
+					
+					$szPreviousTransactionMessage = $PreviousMessage;
 					$szLogMessage = "Duplicate transaction for OrderID: ".$szOrderID.". A duplicate transaction means that a transaction with these details has already been processed by the payment provider. The details of the original transaction: ".$szPreviousTransactionMessage.". Response object: ";
 					
-					if ($tdsarThreeDSecureAuthenticationResult->getPreviousTransactionResult()->getStatusCode()->getValue() == 0)
+					if ($PreviousStatusCode == 0)
 					{
 						$message = $message.". A duplicate transaction means that a transaction with these details has already been processed by the payment provider. The details of the original transaction are - ".$szPreviousTransactionMessage;
 					}
@@ -895,19 +1122,16 @@ class Cardsave_Cardsaveonlinepayments_Model_Direct extends Mage_Payment_Model_Me
 				case 30:
 					$error = true;
 					// status code of 30 - means an error occurred 
-					$szLogMessage = "3D Secure transaction could not be completed for OrderID: ".$szOrderID.". Error message: ".$tdsarThreeDSecureAuthenticationResult->getMessage();
-					if ($tdsarThreeDSecureAuthenticationResult->getErrorMessages()->getCount() > 0)
+					
+					// status code of 30 - means an error occurred
+					$CustomerMessage = getErrorFromGateway($szMessageDetail, $ret);
+					
+					$szLogMessage = "3D Secure transaction could not be completed for OrderID: ".$szOrderID.". Error message: ".$CustomerMessage;
+					
 					{
 						$szLogMessage = $szLogMessage.".";
-						$message =$message."."; 
-	
-						for ($LoopIndex = 0; $LoopIndex < $tdsarThreeDSecureAuthenticationResult->getErrorMessages()->getCount(); $LoopIndex++)
-						{
-							$szLogMessage = $szLogMessage.$tdsarThreeDSecureAuthenticationResult->getErrorMessages()->getAt($LoopIndex).";";
-							$message = $message.$tdsarThreeDSecureAuthenticationResult->getErrorMessages()->getAt($LoopIndex).";";
-						}
-						$szLogMessage = $szLogMessage." ";
-						$message = $message." ";
+						$message = $message."."; 
+
 					}
 					break;
 				default:
@@ -917,7 +1141,7 @@ class Cardsave_Cardsaveonlinepayments_Model_Direct extends Mage_Payment_Model_Me
 			}
 			
 			// log 3DS payment result
-			$szLogMessage = $szLogMessage.print_r($tdsarThreeDSecureAuthenticationResult, 1);
+			$szLogMessage = $szLogMessage.print_r($ret, 1);
 			Mage::log($szLogMessage);
 		}
 		
@@ -1233,6 +1457,9 @@ class Cardsave_Cardsaveonlinepayments_Model_Direct extends Mage_Payment_Model_Me
      */
     public function refund(Varien_Object $payment, $amount)
     {
+	
+		//Mage::throwException('This payment module does not support refunds. Please refund from within the Merchant Management System.');
+		
         $error = false;
    		$szTransactionType = "REFUND";
    		$orderStatus = 'csv_refunded';
@@ -1278,6 +1505,8 @@ class Cardsave_Cardsaveonlinepayments_Model_Direct extends Mage_Payment_Model_Me
      */
     public function csvVoid(Varien_Object $payment)
     {
+		//Mage::throwException('This payment module does not support voiding transactions. Please void transactions from within the Merchant Management System.');
+		
         $error = false;
         $szTransactionType = "VOID";
         $orderStatus = "csv_voided";
@@ -1484,44 +1713,199 @@ class Cardsave_Cardsaveonlinepayments_Model_Direct extends Mage_Payment_Model_Me
 		
 		if($error === false)
 		{
-			$PaymentProcessorFullDomain = $this->_getPaymentProcessorFullDomain();
+						
+			if (!$takePaymentInStoreBaseCurrency) {	
+
+				// Take payment in order currency
+				$szCurrencyShort = $order->getOrderCurrency()->getCurrencyCode();
+				
+				if ($szCurrencyShort != '' && $iclISOCurrencyList->getISOCurrency($szCurrencyShort, $icISOCurrency))
+				{
+					$nCurrencyCode = $icISOCurrency->getISOCode();
+					
+				}
 			
-	    	$rgeplRequestGatewayEntryPointList = new CSV_RequestGatewayEntryPointList();
-			$rgeplRequestGatewayEntryPointList->add("https://gw1.".$PaymentProcessorFullDomain, 100, 2);
-			$rgeplRequestGatewayEntryPointList->add("https://gw2.".$PaymentProcessorFullDomain, 200, 2);
-			$rgeplRequestGatewayEntryPointList->add("https://gw3.".$PaymentProcessorFullDomain, 300, 2);
-	    	
-	    	$crtCrossReferenceTransaction = new CSV_CrossReferenceTransaction($rgeplRequestGatewayEntryPointList);
-	    	$crtCrossReferenceTransaction->getMerchantAuthentication()->setMerchantID($szMerchantID);
-			$crtCrossReferenceTransaction->getMerchantAuthentication()->setPassword($szPassword);
-			
-			if (!$takePaymentInStoreBaseCurrency) {		
+				// Calculate amount
 				$power = pow(10, $icISOCurrency->getExponent());
 				$nAmount = round($order->getGrandTotal() * $power,0);
 			} else {
-				$nAmount = $this->_getRoundedAmount($amount, $icISOCurrency->getExponent());
+				// Take payment in site base currency
+				//$szCurrencyShort = $order->getOrderCurrency()->getCurrencyCode();
+				$szCurrencyShort = $order->getBaseCurrencyCode();
+				
+				if ($szCurrencyShort != '' && $iclISOCurrencyList->getISOCurrency($szCurrencyShort, $icISOCurrency))
+				{
+					$nCurrencyCode = $icISOCurrency->getISOCode();
+					
+				}
+				
+					$nAmount = $this->_getRoundedAmount($amount, $icISOCurrency->getExponent());
 			}
 
 			$szCurrencyShort = $order->getOrderCurrency()->getCurrencyCode();
-			if ($szCurrencyShort != '' &&
-				$iclISOCurrencyList->getISOCurrency($szCurrencyShort, $icISOCurrency))
+			if ($szCurrencyShort != '' && $iclISOCurrencyList->getISOCurrency($szCurrencyShort, $icISOCurrency))
 			{
 				$nCurrencyCode = new CSV_NullableInt($icISOCurrency->getISOCode());
-				$crtCrossReferenceTransaction->getTransactionDetails()->getCurrencyCode()->setValue($icISOCurrency->getISOCode());
+				
 			}
 			
 			// round the amount before use
 			//$nDecimalAmount = $this->_getRoundedAmount($nAmount, $icISOCurrency->getExponent());
-			
-			$crtCrossReferenceTransaction->getTransactionDetails()->setOrderID($szOrderID);
-			$crtCrossReferenceTransaction->getTransactionDetails()->getAmount()->setValue($nAmount);
-			
-			$crtCrossReferenceTransaction->getTransactionDetails()->getMessageDetails()->setCrossReference($szCrossReference);
-			$crtCrossReferenceTransaction->getTransactionDetails()->getMessageDetails()->setTransactionType($szTransactionType);
-	    	
+				    	
 			try
 			{
-				$boTransactionProcessed = $crtCrossReferenceTransaction->processTransaction($crtrCrossReferenceTransactionResult, $todTransactionOutputData);
+				
+				
+				///////////////////////////////////////////////
+				///             PHP 5.4 fix                 ///
+				///////////////////////////////////////////////
+				
+				//set up the variables
+				$CrossReference = $szCrossReference; //CrossReference of Original Transaction
+
+				$Amount = $nAmount; //Amount to charge in this new transaction
+				$OrderID = $szOrderID; //Order ID for this new transaction
+				$OrderDescription = $szTransactionType . " for Order: " .$OrderID; //Order Description for this new transaction
+				$ThreeDEnabled = "FALSE"; //False will turn off 3DS, it should be disabled for customer not present transactions (recurring payments).
+				$IPAddress = $_SERVER['REMOTE_ADDR'];
+				$TransactionType = $szTransactionType; //type of transaction
+				$CurrencyCode = $nCurrencyCode; //currency type
+				
+				//XML Headers used in cURL - remember to change the function after thepaymentgateway.net in SOAPAction when changing the XML to call a different function
+				$headers = array(
+							'SOAPAction:https://www.thepaymentgateway.net/CrossReferenceTransaction',
+							'Content-Type: text/xml; charset = utf-8',
+							'Connection: close'
+				);
+				
+				
+				//XML to send to the Gateway
+				$xml = '<?xml version="1.0" encoding="utf-8"?>
+							<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+								<soap:Body>
+									<CrossReferenceTransaction xmlns="https://www.thepaymentgateway.net/">
+										<PaymentMessage>
+											<MerchantAuthentication MerchantID="'. trim($szMerchantID) .'" Password="'. trim($szPassword) . '" />
+											<TransactionDetails Amount="'. $Amount .'" CurrencyCode="'. $CurrencyCode .'">
+												<MessageDetails TransactionType="'. $TransactionType .'" NewTransaction="FALSE" CrossReference="'. $CrossReference .'" />
+												<OrderID>'. $OrderID .'</OrderID>
+												<OrderDescription>'. $OrderDescription .'</OrderDescription>
+												<TransactionControl>
+													<EchoCardType>TRUE</EchoCardType>
+													<EchoAVSCheckResult>TRUE</EchoAVSCheckResult>
+													<EchoCV2CheckResult>TRUE</EchoCV2CheckResult>
+													<EchoAmountReceived>TRUE</EchoAmountReceived>
+													<DuplicateDelay>60</DuplicateDelay>
+													<ThreeDSecureOverridePolicy>'. $ThreeDEnabled .'</ThreeDSecureOverridePolicy>
+													<CustomVariables>
+													<GenericVariable Name="MyInputVariable" Value="Ping" />
+													</CustomVariables>
+												</TransactionControl>
+											</TransactionDetails>
+											<CustomerDetails>
+												<CustomerIPAddress>' . $IPAddress . '</CustomerIPAddress>
+											</CustomerDetails>
+											<PassOutData>Some data to be passed out</PassOutData>
+										</PaymentMessage>
+									</CrossReferenceTransaction>
+								</soap:Body>
+							</soap:Envelope>';
+				
+				
+				$gwId = 1;
+				$domain = "cardsaveonlinepayments.com";
+				$port = "4430";
+				$transattempt = 1;
+				$soapSuccess = false;
+								
+				
+				//It will attempt each of the gateway servers (gw1, gw2 & gw3) 3 times each before totally failing
+			while(!$soapSuccess && $gwId <= 3 && $transattempt <= 3) {	
+				
+				//builds the URL to post to (rather than it being hard coded - means we can loop through all 3 gateway servers)
+				$url = 'https://gw'.$gwId.'.'.$domain.':'.$port.'/';
+				
+				//initialise cURL
+				$curl = curl_init();
+				
+				//set the options
+				curl_setopt($curl, CURLOPT_HEADER, false);
+				curl_setopt($curl, CURLOPT_HTTPHEADER, $headers); 
+				curl_setopt($curl, CURLOPT_POST, true);
+				curl_setopt($curl, CURLOPT_URL, $url);
+				curl_setopt($curl, CURLOPT_POSTFIELDS, $xml);
+				curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+				curl_setopt($curl, CURLOPT_ENCODING, 'UTF-8');
+				curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
+				
+				//Execute cURL request
+				//$ret = returned XML
+				$ret = curl_exec($curl);
+				//$err = returned error number
+				$err = curl_errno($curl);
+				//retHead = returned XML header
+				$retHead = curl_getinfo($curl);
+				
+				//close cURL connection
+				curl_close($curl);
+				$curl = null;
+				
+				//if no error returned
+				if($err == 0) {
+					//Get the status code
+					$StatusCode = GetXMLValue("StatusCode", $ret, "[0-9]+");
+					
+					if(is_numeric($StatusCode)) {
+						//request was processed correctly
+						if( $StatusCode != 50 ) {
+							//set success flag so it will not run the request again.
+							$soapSuccess = true;
+							
+							$szMessage = GetXMLValue("Message", $ret, ".+");
+							$szCrossReference = GetCrossReference($ret);
+							$szAddressNumericCheckResult = GetXMLValue("AddressNumericCheckResult", $ret, ".+");
+							$szPostCodeCheckResult = GetXMLValue("PostCodeCheckResult", $ret, ".+");
+							$szCV2CheckResult = GetXMLValue("CV2CheckResult", $ret, ".+");
+							$szThreeDSecureAuthenticationCheckResult = GetXMLValue("ThreeDSecureAuthenticationCheckResult", $ret, ".+");
+							
+							switch ($StatusCode) {				
+								case 0:
+									$boTransactionProcessed = true;
+									break;		
+												
+								case 4:
+									$boTransactionProcessed = true;
+									break;
+								case 5:
+									//Card declined
+									$boTransactionProcessed = true;
+									break;
+								case 20:
+									$boTransactionProcessed = true;
+									break;
+								default:
+									$szMessageDetail = GetXMLValue("Message", $ret, ".+");
+									$boTransactionProcessed = true;
+									break;
+							}				
+						}
+					}
+				}
+				
+				//increment the transaction attempt if <=2
+				if($transattempt <=2) {
+					$transattempt++;
+				} else {
+					//reset transaction attempt to 1 & increment $gwID (to use next numeric gateway number (eg. use gw2 rather than gw1 now))
+					$transattempt = 1;
+					$gwId++;
+				}			
+			}
+
+				
+				///////////////////////////////////////////////
+				///            end PHP fix                  ///
+				///////////////////////////////////////////////
 			}
 			catch (Exception $exc)
 			{
@@ -1531,35 +1915,26 @@ class Cardsave_Cardsaveonlinepayments_Model_Direct extends Mage_Payment_Model_Me
 			if ($boTransactionProcessed == false)
 			{
 				// could not communicate with the payment gateway
-				$error = "Couldn't complete ".$szTransactionType." transaction. Details: ".$crtCrossReferenceTransaction->getLastException();
+				$error = "Couldn't complete ".$szTransactionType." transaction. Reason: Unable to communicate with payment gateway. Please check outgoing TCP port 4430 is open on your server.";
 				$szLogMessage = $error;
 			}
 			else
 			{
-				switch($crtrCrossReferenceTransactionResult->getStatusCode())
+				switch($StatusCode)
 				{
 					case 0:
 						$error = false;
-						$szNewCrossReference = $todTransactionOutputData->getCrossReference();
+						$szNewCrossReference = $szCrossReference;
 						$szLogMessage = $szTransactionType . " CrossReference transaction successfully completed. Response object: ";
 						
 						$payment->setTransactionId($szNewCrossReference)
-								->setParentTransactionId($szCrossReference)
+								->setParentTransactionId($CrossReference)
 								->setIsTransactionClosed(1);
 						$payment->save();
 						break;
 					default:
-						$szLogMessage = $crtrCrossReferenceTransactionResult->getMessage();
-						if ($crtrCrossReferenceTransactionResult->getErrorMessages()->getCount() > 0)
-						{
-							$szLogMessage = $szLogMessage.".";
-		
-							for ($LoopIndex = 0; $LoopIndex < $crtrCrossReferenceTransactionResult->getErrorMessages()->getCount(); $LoopIndex++)
-							{
-								$szLogMessage = $szLogMessage.$crtrCrossReferenceTransactionResult->getErrorMessages()->getAt($LoopIndex).";";
-							}
-							$szLogMessage = $szLogMessage." ";
-						}
+						$szLogMessage = $szMessageDetail;
+						
 					
 						$error = "Couldn't complete ".$szTransactionType." transaction for CrossReference: " . $szCrossReference . ". Payment Response: ".$szLogMessage;
 						$szLogMessage = $szTransactionType . " CrossReference transaction failed. Response object: ";
