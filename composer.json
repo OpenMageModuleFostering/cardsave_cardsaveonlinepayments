@@ -1,5 +1,5 @@
 {
-    "name": "OpenMageModuleFostering\/Cardsave_Cardsaveonlinepayments",
+    "name": "openmage-module-fostering\/cardsave_cardsaveonlinepayments",
     "type": "magento-module",
     "license": "GPL",
     "homepage": "",
