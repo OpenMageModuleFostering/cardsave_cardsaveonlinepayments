@@ -1,16 +1,19 @@
 {
-    "name": "OpenMageModuleFostering/Cardsave_Cardsaveonlinepayments",
+    "name": "OpenMageModuleFostering\/Cardsave_Cardsaveonlinepayments",
     "type": "magento-module",
     "license": "GPL",
     "homepage": "",
     "description": "Payment Plugin for the CardSave Payment Gateway.",
     "authors": [
-    {
-        "name": "CardSave",
-        "email": "alistair.richardson@cardsave.net"
-    }
-],
+        {
+            "name": "CardSave",
+            "email": "alistair.richardson@cardsave.net"
+        }
+    ],
     "suggest": {
-        "magento-hackathon/magento-composer-installer": "*"
-    }
+        "magento-hackathon\/magento-composer-installer": "*"
+    },
+    "keywords": [
+        "openmage-module"
+    ]
 }
